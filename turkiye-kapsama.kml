@@ -494,12 +494,12 @@
 	
 <Style>
   <LineStyle>
-    <color>ffa6a09a</color>
-    <width>1</width>
+    <color>ff327d32</color>
+    <width>1.5</width>
   </LineStyle>
 
   <PolyStyle>
-    <color>66edeae8</color>
+    <color>c053a834</color>
     <fill>1</fill>
     <outline>1</outline>
   </PolyStyle>
