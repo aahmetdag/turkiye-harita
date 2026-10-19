@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Türkiye Kişi Haritası</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    .leaflet-tooltip {
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+
+<script>
+
+const map = L.map('map').setView([39.0, 35.0], 6);
+
+L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap'
+  }
+).addTo(map);
+
+
+let activeProvinces = new Set();
+let provinceLayer = null;
+
+
+function normalizeProvince(value) {
+
+  let key = String(value || '')
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+    .replace(/[^a-z0-9]/g, '');
+
+  const aliases = {
+    afyon: 'afyonkarahisar',
+    icel: 'mersin',
+    izmit: 'kocaeli',
+    antep: 'gaziantep',
+    maras: 'kahramanmaras',
+    urfa: 'sanliurfa'
+  };
+
+  if (aliases[key]) {
+    key = aliases[key];
+  }
+
+  return key;
+}
+
+
+function provinceStyle(feature) {
+
+  const provinceName =
+    feature.properties.shapeName ||
+    feature.properties.name ||
+    '';
+
+  const key = normalizeProvince(provinceName);
+
+  const active = activeProvinces.has(key);
+
+  if (active) {
+
+    return {
+      color: '#327d32',
+      weight: 1.5,
+      fillColor: '#53a834',
+      fillOpacity: 0.55
+    };
+
+  }
+
+  return {
+    color: '#a6a09a',
+    weight: 1,
+    fillColor: '#edeae8',
+    fillOpacity: 0.40
+  };
+}
+
+
+function styleMap() {
+
+  if (!provinceLayer) return;
+
+  provinceLayer.eachLayer(function(layer) {
+
+    if (!layer.feature) return;
+
+    layer.setStyle(
+      provinceStyle(layer.feature)
+    );
+
+  });
+
+}
+
+
+async function loadActiveProvinces() {
+
+  try {
+
+    const response = await fetch(
+      'aktif-iller.json?t=' + Date.now(),
+      {
+        cache: 'no-store'
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('aktif-iller.json bulunamadı');
+    }
+
+    const data = await response.json();
+
+    activeProvinces = new Set(
+      (data.activeProvinces || [])
+        .map(normalizeProvince)
+    );
+
+    styleMap();
+
+    console.log(
+      'Aktif iller:',
+      Array.from(activeProvinces)
+    );
+
+  } catch (error) {
+
+    console.log(
+      'Aktif il listesi henüz hazır değil:',
+      error.message
+    );
+
+  }
+
+}
+
+
+const customLayer = L.geoJSON(null, {
+
+  style: provinceStyle,
+
+  onEachFeature: function(feature, layer) {
+
+    const provinceName =
+      feature.properties.shapeName ||
+      feature.properties.name ||
+      '';
+
+    if (provinceName) {
+
+      layer.bindTooltip(
+        provinceName,
+        {
+          sticky: true
+        }
+      );
+
+    }
+
+  }
+
+});
+
+
+provinceLayer = omnivore.kml(
+  'geoBoundaries-TUR-ADM1_simplified.kml?t=' +
+  Date.now(),
+  null,
+  customLayer
+)
+.on('ready', function() {
+
+  map.fitBounds(
+    provinceLayer.getBounds()
+  );
+
+  loadActiveProvinces();
+
+})
+.addTo(map);
+
+
+loadActiveProvinces();
+
+
+setInterval(
+  loadActiveProvinces,
+  60000
+);
+
+</script>
+
+</body>
+</html>
