@@ -1,11 +1,15 @@
 {
-  "updatedAt": "2026-10-24T09:11:55.109Z",
+  "updatedAt": "2026-10-24T09:16:36.699Z",
   "activeProvinces": [
     "ankara",
+    "aydin",
     "corum",
     "diyarbakir",
+    "elazig",
     "izmir",
     "kayseri",
-    "konya"
+    "konya",
+    "trabzon",
+    "van"
   ]
 }
